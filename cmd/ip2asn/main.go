@@ -1,6 +1,7 @@
 package main
 
 import (
+	"bufio"
 	"encoding/csv"
 	"fmt"
 	"io"
@@ -46,7 +47,7 @@ func main() {
 		// }
 		end := netip.MustParseAddr(rec[1])
 
-		err = st.Insert(start, end, rec[4])
+		err = st.Insert(start, end, "ASN:"+rec[2]+" Country:\""+rec[3]+"\" Info:\""+rec[4]+"\"")
 		if err != nil {
 			fmt.Println(err)
 			continue
@@ -65,25 +66,49 @@ func main() {
 		// }
 		// fmt.Printf("%s\t%s\t%s\t%s\t%s\n", start, end, rec[2], rec[3], rec[4])
 	}
-	addr := netip.MustParseAddr("1.24.220.1")
-	vs, found := st.AllIntersections(addr, addr)
-	if found {
-		fmt.Println(len(vs))
-		fmt.Println(vs)
-	}
-	addr = netip.MustParseAddr("2a03:2880:f11c:8183:face:b00c::25de")
-	fmt.Println(addr)
-	vs, found = st.AllIntersections(addr, addr)
-	if found {
-		fmt.Println(len(vs))
-		fmt.Println(vs)
-	} else {
-		fmt.Println("not found")
+	// addr := netip.MustParseAddr("1.24.220.1")
+	// vs, found := st.AllIntersections(addr, addr)
+	// if found {
+	// 	fmt.Println(len(vs))
+	// 	fmt.Println(vs)
+	// }
+
+	file, err := os.Open(os.Args[1])
+
+	//handle errors while opening
+	if err != nil {
+		log.Fatalf("Error when opening file: %s", err)
 	}
 
-	fmt.Println(st.Size())
+	defer file.Close()
 
-	PrintMemUsage()
+	fileScanner := bufio.NewScanner(file)
+
+	// read line by line
+	for fileScanner.Scan() {
+		// fmt.Println(fileScanner.Text())
+		if len(fileScanner.Text()) <= 0 {
+			continue
+		}
+
+		addr := netip.MustParseAddr(fileScanner.Text())
+		fmt.Printf("%s=", addr)
+		vs, found := st.AllIntersections(addr, addr)
+		if found {
+			// fmt.Println(len(vs))
+			fmt.Println(vs)
+		} else {
+			fmt.Println("not found")
+		}
+
+		// fmt.Println(st.Size())
+	}
+	// handle first encountered error while reading
+	if err := fileScanner.Err(); err != nil {
+		log.Fatalf("Error while reading file: %s", err)
+	}
+
+	// PrintMemUsage()
 }
 
 // PrintMemUsage outputs the current, total and OS memory being used. As well as the number
